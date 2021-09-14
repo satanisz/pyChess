@@ -22,7 +22,8 @@ display_surface = pygame.display.set_mode((X, Y))
 pygame.display.set_caption('Image')
 
 # create a surface object, image is drawn on it.
-image = pygame.image.load(r'../images/chess_pieces_sprite.bmp')
+image = pygame.image.load(r'images/chess_pieces_sprite.bmp')
+image = image.convert_alpha()
 
 # infinite loop
 while True:

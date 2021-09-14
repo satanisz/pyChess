@@ -19,11 +19,12 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 shift_x = 100
 shift_y = 100
 # - objects -
-piece_size = 45
-tile_size = 55
+piece_size = 46
+tile_size = 56
 
 rectangle2 = pygame.rect.Rect(  tile_size + shift_x+5, 2*tile_size + shift_y+5, piece_size, piece_size)
 rectangle1 = pygame.rect.Rect(5*tile_size + shift_x+5, 5*tile_size + shift_y+5, piece_size, piece_size)
+
 rectangle1_draging = False
 
 clock = pygame.time.Clock()
@@ -69,8 +70,8 @@ while running:
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 rectangle1_draging = False
-                rectangle1.x -= rectangle1.x % tile_size + 5
-                rectangle1.y -= rectangle1.y % tile_size + 5
+                rectangle1.x -= ((rectangle1.x + 28 +7) % tile_size)  - 28
+                rectangle1.y -= ((rectangle1.y + 28 +7) % tile_size)  - 28
 
         elif event.type == pygame.MOUSEMOTION:
             if rectangle1_draging:
