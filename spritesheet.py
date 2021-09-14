@@ -11,17 +11,17 @@
 # - Updated from Python 2 -> Python 3.
 
 import pygame
-from settings import Settings
+from settings import SET
 
 class SpriteSheet:
 
     def __init__(self, filename):
         """Load the sheet."""
         try:
-            self.sheet = pygame.image.load(filename).convert_alpha()
-            self.settings = Settings()
+            self.sheet = pygame.image.load(filename).convert()
+            self.settings = SET()
 
-            self.sheet = pygame.transform.scale(self.sheet, (self.settings.piece_width, self.settings.piece_height))
+            self.sheet = pygame.transform.smoothscale(self.sheet, (6*self.settings.piece_width, 2*self.settings.piece_height))
         except pygame.error as e:
             print(f"Unable to load spritesheet image: {filename}")
             raise SystemExit(e)

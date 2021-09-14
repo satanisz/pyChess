@@ -23,7 +23,7 @@ pygame.display.set_caption('Image')
 
 # create a surface object, image is drawn on it.
 image = pygame.image.load(r'images/chess_pieces_sprite.bmp')
-image = image.convert_alpha()
+image = image.convert()
 
 # infinite loop
 while True:
