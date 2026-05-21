@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pychess-sprite-demo"
+version = "0.1.0"
+description = "A small pygame chess sprite-sheet demo."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE.md"]
+authors = [
+  { name = "stanisz" },
+]
+dependencies = [
+  "pygame-ce>=2.5.7",
+]
+
+[project.scripts]
+pychess = "pychess.chess_game:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0",
+  "ruff>=0.14",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pychess"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LICENSE.md",
+  "/README.md",
+  "/pyproject.toml",
+  "/src",
+  "/tests",
+]
+
+[tool.pytest]
+minversion = "9.0"
+addopts = [
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "B",
+  "C4",
+  "E",
+  "F",
+  "I",
+  "N",
+  "PIE",
+  "PTH",
+  "RET",
+  "RUF",
+  "SIM",
+  "T20",
+  "UP",
+  "W",
+]
+ignore = [
+  "N806",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/**/*.py" = [
+  "T201",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
