@@ -7,6 +7,7 @@ import sys
 
 from pychess.arena import play_game
 from pychess.engines import available_engine_names, build_engine
+from pychess.eval import MatchScore
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -23,24 +24,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=1)
     args = parser.parse_args(argv)
 
-    score = {"1-0": 0, "0-1": 0, "1/2-1/2": 0, "*": 0}
+    score = MatchScore()
     for game_index in range(args.games):
         white = build_engine(args.white, seed=args.seed + game_index * 2)
         black = build_engine(args.black, seed=args.seed + game_index * 2 + 1)
         result = play_game(white, black, max_plies=args.max_plies)
-        score[result.result] = score.get(result.result, 0) + 1
+        score.add(result)
         sys.stdout.write(
             f"{game_index + 1}: {result.white} vs {result.black} "
             f"{result.result} ({result.termination}, {result.plies} plies)\n"
         )
 
-    sys.stdout.write(
-        "score: "
-        f"white={score.get('1-0', 0)}, "
-        f"black={score.get('0-1', 0)}, "
-        f"draw={score.get('1/2-1/2', 0)}, "
-        f"unfinished={score.get('*', 0)}\n"
-    )
+    sys.stdout.write(f"{score.summary_line()}\n")
     return 0
 
 
