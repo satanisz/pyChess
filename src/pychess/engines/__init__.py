@@ -8,6 +8,7 @@ from pychess.engines.base import (
 )
 from pychess.engines.heuristic import HeuristicEngine
 from pychess.engines.random_engine import RandomEngine
+from pychess.engines.registry import available_engine_names, build_engine
 
 __all__ = [
     "EngineContext",
@@ -16,4 +17,6 @@ __all__ = [
     "NoLegalMovesError",
     "PlayerEngine",
     "RandomEngine",
+    "available_engine_names",
+    "build_engine",
 ]

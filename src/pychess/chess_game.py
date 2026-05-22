@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 
 import pygame
 
 from pychess.chess_set import ChessSet
-from pychess.core import GameController, IllegalMoveError, MoveRecord
+from pychess.core import GameController, IllegalMoveError, MoveRecord, Side
+from pychess.engines import (
+    EngineContext,
+    PlayerEngine,
+    available_engine_names,
+    build_engine,
+)
 from pychess.settings import Settings
 from pychess.ui import BoardGeometry
 
@@ -21,10 +28,16 @@ LEGAL_MOVE_DOT = (35, 35, 35)
 class ChessGame:
     """Overall class to manage game assets and behavior."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        white_engine: PlayerEngine | None = None,
+        black_engine: PlayerEngine | None = None,
+    ) -> None:
         """Initialize the game, and create resources."""
         pygame.init()
         self.settings = Settings()
+        self.clock = pygame.time.Clock()
 
         self.screen = pygame.display.set_mode(
             (self.settings.screen_width, self.settings.screen_height)
@@ -39,12 +52,18 @@ class ChessGame:
         self.chess_set = ChessSet(self)
         self.selected_square: str | None = None
         self.last_move: MoveRecord | None = None
+        self.engines = {
+            Side.WHITE: white_engine,
+            Side.BLACK: black_engine,
+        }
 
     def run_game(self) -> None:
         """Start the main loop for the game."""
         while True:
             self._check_events()
+            self._maybe_play_engine_turn()
             self._update_screen()
+            self.clock.tick(60)
 
     def _check_events(self) -> None:
         for event in pygame.event.get():
@@ -63,6 +82,9 @@ class ChessGame:
         pygame.display.flip()
 
     def _handle_left_click(self, position: tuple[int, int]) -> None:
+        if self.engines[self.game.turn] is not None:
+            return
+
         square = self.board.square_at(*position)
         if square is None:
             self.selected_square = None
@@ -87,6 +109,27 @@ class ChessGame:
             self.selected_square = None
             return
 
+        self.selected_square = None
+
+    def _maybe_play_engine_turn(self) -> None:
+        if self.game.status().is_game_over:
+            return
+
+        engine = self.engines[self.game.turn]
+        if engine is None:
+            return
+
+        context = EngineContext(
+            fen=self.game.fen(),
+            turn=self.game.turn,
+            legal_moves=self.game.legal_moves(),
+            move_history=self.game.move_history(),
+        )
+        decision = engine.choose_move(context)
+        if decision.uci not in context.legal_moves:
+            return
+
+        self.last_move = self.game.push_uci(decision.uci)
         self.selected_square = None
 
     def _select_square(self, square: str) -> None:
@@ -131,11 +174,27 @@ class ChessGame:
             self.screen.blit(image, (square.x, square.y))
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Run the pygame demo."""
-    chess_game = ChessGame()
+    parser = argparse.ArgumentParser(description="Run PyChess.")
+    engine_choices = ("none", *available_engine_names())
+    parser.add_argument("--white-engine", default="none", choices=engine_choices)
+    parser.add_argument("--black-engine", default="none", choices=engine_choices)
+    parser.add_argument("--seed", type=int, default=1)
+    args = parser.parse_args(argv)
+
+    chess_game = ChessGame(
+        white_engine=_build_optional_engine(args.white_engine, seed=args.seed),
+        black_engine=_build_optional_engine(args.black_engine, seed=args.seed + 1),
+    )
     chess_game.run_game()
     return 0
+
+
+def _build_optional_engine(name: str, *, seed: int) -> PlayerEngine | None:
+    if name == "none":
+        return None
+    return build_engine(name, seed=seed)
 
 
 if __name__ == "__main__":
