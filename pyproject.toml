@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 pychess = "pychess.chess_game:main"
+pychess-arena = "pychess.arena.cli:main"
 
 [dependency-groups]
 dev = [
