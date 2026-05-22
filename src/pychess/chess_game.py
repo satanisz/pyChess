@@ -7,7 +7,12 @@ import sys
 import pygame
 
 from pychess.chess_set import ChessSet
+from pychess.core import GameController
 from pychess.settings import Settings
+from pychess.ui import BoardGeometry
+
+LIGHT_SQUARE = (238, 238, 210)
+DARK_SQUARE = (118, 150, 86)
 
 
 class ChessGame:
@@ -23,6 +28,11 @@ class ChessGame:
         )
         pygame.display.set_caption("Chess")
 
+        self.game = GameController()
+        self.board = BoardGeometry.from_screen(
+            self.settings.screen_width,
+            self.settings.screen_height,
+        )
         self.chess_set = ChessSet(self)
 
     def run_game(self) -> None:
@@ -40,12 +50,25 @@ class ChessGame:
 
     def _update_screen(self) -> None:
         self.screen.fill(self.settings.bg_color)
-
-        for index, piece in enumerate(self.chess_set.pieces[6:]):
-            piece.x = index * 320
-            piece.blitme()
-
+        self._draw_board()
+        self._draw_pieces()
         pygame.display.flip()
+
+    def _draw_board(self) -> None:
+        for square in self.board.squares():
+            color = LIGHT_SQUARE if square.is_light else DARK_SQUARE
+            rect = pygame.Rect(square.x, square.y, square.size, square.size)
+            pygame.draw.rect(self.screen, color, rect)
+
+    def _draw_pieces(self) -> None:
+        for piece in self.game.pieces():
+            square = self.board.square(piece.square)
+            image = self.chess_set.scaled_image_for(
+                piece.color.value,
+                piece.piece_type,
+                square.size,
+            )
+            self.screen.blit(image, (square.x, square.y))
 
 
 def main() -> int:
