@@ -117,6 +117,19 @@ class GameController:
             for square, piece in sorted(self._board.piece_map().items())
         )
 
+    def piece_at(self, square_name: str) -> PieceOnSquare | None:
+        """Return the piece on a square, if any."""
+        square = chess.parse_square(square_name)
+        piece = self._board.piece_at(square)
+        if piece is None:
+            return None
+        return PieceOnSquare(
+            square=square_name,
+            piece_type=chess.piece_name(piece.piece_type),
+            color=Side.from_chess_color(piece.color),
+            symbol=piece.symbol(),
+        )
+
     def status(self, *, claim_draw: bool = True) -> GameStatus:
         """Return a read-only status summary."""
         result = self._board.result(claim_draw=claim_draw)
@@ -145,6 +158,17 @@ class GameController:
             return False
         return move in self._board.legal_moves
 
+    def legal_destinations_from(self, square_name: str) -> tuple[str, ...]:
+        """Return destination squares for legal moves from a source square."""
+        square = chess.parse_square(square_name)
+        return tuple(
+            sorted(
+                chess.square_name(move.to_square)
+                for move in self._board.legal_moves
+                if move.from_square == square
+            )
+        )
+
     def push_uci(self, move_uci: str) -> MoveRecord:
         """Apply a legal UCI move and return its record."""
         try:
@@ -153,6 +177,48 @@ class GameController:
             msg = f"Invalid UCI move: {move_uci}"
             raise IllegalMoveError(msg) from exc
         return self._push_move(move)
+
+    def push_between(
+        self,
+        from_square: str,
+        to_square: str,
+        *,
+        promotion: str = "q",
+    ) -> MoveRecord:
+        """Apply a legal move between two squares.
+
+        Promotion defaults to queen, which keeps mouse input simple until the UI
+        has a dedicated promotion dialog.
+        """
+        try:
+            source = chess.parse_square(from_square)
+            target = chess.parse_square(to_square)
+        except ValueError as exc:
+            msg = f"Invalid square move: {from_square}-{to_square}"
+            raise IllegalMoveError(msg) from exc
+
+        candidates = [
+            move
+            for move in self._board.legal_moves
+            if move.from_square == source and move.to_square == target
+        ]
+        if not candidates:
+            msg = f"Illegal move in current position: {from_square}-{to_square}"
+            raise IllegalMoveError(msg)
+
+        promotion_piece = _promotion_piece_type(promotion)
+        for move in candidates:
+            if move.promotion == promotion_piece:
+                return self._push_move(move)
+
+        if len(candidates) == 1:
+            return self._push_move(candidates[0])
+
+        msg = (
+            "Promotion move requires a valid promotion piece: "
+            f"{from_square}-{to_square}"
+        )
+        raise IllegalMoveError(msg)
 
     def push_san(self, move_san: str) -> MoveRecord:
         """Apply a legal SAN move and return its record."""
@@ -222,3 +288,13 @@ class GameController:
         )
         self._records.append(record)
         return record
+
+
+def _promotion_piece_type(promotion: str) -> chess.PieceType | None:
+    promotion_map = {
+        "q": chess.QUEEN,
+        "r": chess.ROOK,
+        "b": chess.BISHOP,
+        "n": chess.KNIGHT,
+    }
+    return promotion_map.get(promotion.lower())

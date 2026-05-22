@@ -58,6 +58,36 @@ def test_push_san_applies_move() -> None:
     assert game.turn == Side.BLACK
 
 
+def test_piece_at_and_legal_destinations_support_ui_input() -> None:
+    game = GameController()
+
+    piece = game.piece_at("e2")
+
+    assert piece is not None
+    assert piece.piece_type == "pawn"
+    assert piece.color == Side.WHITE
+    assert game.piece_at("e4") is None
+    assert game.legal_destinations_from("e2") == ("e3", "e4")
+
+
+def test_push_between_applies_mouse_style_move() -> None:
+    game = GameController()
+
+    record = game.push_between("e2", "e4")
+
+    assert record.uci == "e2e4"
+    assert record.san == "e4"
+
+
+def test_push_between_promotes_to_queen_by_default() -> None:
+    game = GameController.from_fen("8/P7/8/8/8/8/8/k6K w - - 0 1")
+
+    record = game.push_between("a7", "a8")
+
+    assert record.uci == "a7a8q"
+    assert game.piece_at("a8").symbol == "Q"
+
+
 def test_illegal_and_invalid_moves_are_rejected() -> None:
     game = GameController()
 
