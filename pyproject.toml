@@ -18,6 +18,9 @@ dependencies = [
   "pygame-ce>=2.5.7",
 ]
 
+[project.optional-dependencies]
+examples = ["CairoSVG>=2.7"]
+
 [project.scripts]
 pychess = "pychess.chess_game:main"
 pychess-arena = "pychess.arena.cli:main"

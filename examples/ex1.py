@@ -1,53 +1,21 @@
-# import pygame module in this program
+"""Display the piece images bundled with PyChess."""
+
 import pygame
 
-# activate the pygame library .
-# initiate pygame and give permission
-# to use pygame's functionality.
+from pychess.assets import sprite_sheet_path
+
 pygame.init()
-
-# define the RGB value
-# for white colour
-white = (255, 255, 255)
-
-# assigning values to X and Y variable
-X = 800
-Y = 800
-
-# create the display surface object
-# of specific dimension..e(X, Y).
-display_surface = pygame.display.set_mode((X, Y))
-
-# set the pygame window name
+screen = pygame.display.set_mode((800, 800))
 pygame.display.set_caption("Image")
 
-# create a surface object, image is drawn on it.
-image = pygame.image.load(r"images/chess_pieces_sprite.bmp")
-image = image.convert_alpha()
+with sprite_sheet_path() as path:
+    image = pygame.image.load(path).convert_alpha()
 
-# infinite loop
-while True:
-    # completely fill the surface object
-    # with white colour
-    display_surface.fill(white)
+screen.fill("white")
+screen.blit(image, (0, 0))
+pygame.display.flip()
 
-    # copying the image surface object
-    # to the display surface object at
-    # (0, 0) coordinate.
-    display_surface.blit(image, (0, 0))
+while pygame.event.wait().type != pygame.QUIT:
+    pass
 
-    # iterate over the list of Event objects
-    # that was returned by pygame.event.get() method.
-    for event in pygame.event.get():
-        # if event object type is QUIT
-        # then quitting the pygame
-        # and program both.
-        if event.type == pygame.QUIT:
-            # deactivates the pygame library
-            pygame.quit()
-
-            # quit the program.
-            quit()
-
-        # Draws the surface object to the screen.
-        pygame.display.update()
+pygame.quit()
