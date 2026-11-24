@@ -8,6 +8,7 @@ from contextlib import closing
 import chess.pgn
 import pytest
 
+from pychess.arena.archive import open_archive
 from pychess.arena.cli import _schedule, main
 from pychess.eval.standings import Standings
 
@@ -119,3 +120,35 @@ def test_standings_skip_unfinished_and_self_play_and_count_draws() -> None:
     assert scores.players["a"].points == 1.5 and scores.players["b"].points == 0.5
     assert scores.players["a"].unfinished == scores.players["b"].unfinished == 1
     assert scores.players["a"].self_play == 1
+
+
+def test_elo_leaderboard_prioritizes_rating_and_puts_unrated_last(tmp_path, capsys):
+    database = tmp_path / "league.sqlite3"
+    with open_archive(database) as connection, connection:
+        connection.executemany(
+            """INSERT INTO games (white, black, result, termination, plies, seed,
+                                  max_plies, pgn) VALUES (?, ?, ?, 'normal', 0, '1',
+                                  512, '')""",
+            [
+                ("steady", "rival", "1/2-1/2"),
+                ("steady", "rival", "1/2-1/2"),
+                ("steady", "rival", "1/2-1/2"),
+                ("winner", "loser", "1-0"),
+                ("unrated", "unrated", "*"),
+            ],
+        )
+    before = database.read_bytes()
+    assert main(["--database", str(database), "--standings"]) == 0
+    points_rows = capsys.readouterr().out.splitlines()[1:]
+    assert points_rows[0].startswith("rival\t")
+    assert main(["--database", str(database), "--elo"]) == 0
+    elo_rows = capsys.readouterr().out.splitlines()[1:]
+    assert [row.split("\t")[0] for row in elo_rows] == [
+        "winner",
+        "rival",
+        "steady",
+        "loser",
+        "unrated",
+    ]
+    assert elo_rows[0].endswith("\t1516") and elo_rows[-1].endswith("\t-")
+    assert database.read_bytes() == before

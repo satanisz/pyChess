@@ -103,7 +103,8 @@ def _report(args: argparse.Namespace, database: Path | None) -> None:
             raise ValueError("PGN destination must differ from the database and config")
     with open_archive(database, read_only=True) as connection:
         if args.standings:
-            sys.stdout.write(archive_standings(connection).table() + "\n")
+            standings = archive_standings(connection)
+            sys.stdout.write(standings.table(by_elo=args.standings == "elo") + "\n")
         if args.export_pgn is not None:
             count = export_pgn(connection, args.export_pgn)
             sys.stdout.write(f"Exported {count} games to {args.export_pgn}\n")
@@ -125,10 +126,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-plies", type=int, help="limit half-moves in a game")
     parser.add_argument("--seed", type=int, help="initial seed for built-in engines")
     parser.add_argument("--database", type=Path, help="SQLite file for games and PGNs")
-    parser.add_argument(
+    reports = parser.add_mutually_exclusive_group()
+    reports.add_argument(
         "--standings",
-        action="store_true",
-        help="report cumulative standings from the database and exit",
+        action="store_const",
+        const="points",
+        help="report cumulative standings ordered by points and exit",
+    )
+    reports.add_argument(
+        "--elo",
+        dest="standings",
+        action="store_const",
+        const="elo",
+        help="report the league ranking ordered by local Elo and exit",
     )
     parser.add_argument(
         "--export-pgn",

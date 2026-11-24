@@ -19,6 +19,10 @@ class PlayerScore:
     def points(self) -> float:
         return self.wins + self.draws / 2
 
+    @property
+    def rated_games(self) -> int:
+        return self.wins + self.draws + self.losses
+
 
 @dataclass(slots=True)
 class Standings:
@@ -54,13 +58,15 @@ class Standings:
         first.elo += change
         second.elo -= change
 
-    def table(self) -> str:
+    def table(self, *, by_elo: bool = False) -> str:
         rows = ["engine\tW\tD\tL\tunfinished\tself-play\tpoints\tlocal Elo"]
-        for player in sorted(
-            self.players.values(), key=lambda p: (-p.points, -p.elo, p.name)
-        ):
-            rated = player.wins + player.draws + player.losses
-            rating = str(round(player.elo)) if rated else "-"
+        players = self.players.values()
+        if by_elo:
+            ranked = sorted(players, key=lambda p: (not p.rated_games, -p.elo, p.name))
+        else:
+            ranked = sorted(players, key=lambda p: (-p.points, -p.elo, p.name))
+        for player in ranked:
+            rating = str(round(player.elo)) if player.rated_games else "-"
             rows.append(
                 f"{player.name}\t{player.wins}\t{player.draws}\t{player.losses}\t"
                 f"{player.unfinished}\t{player.self_play}\t{player.points:g}\t{rating}"

@@ -84,6 +84,23 @@ Partia przerwana przez limit półruchów zachowuje wynik `*`. Takie partie
 i gry z samym sobą pomijane są przy obliczaniu Elo. Błąd procesu,
 przekroczenie czasu i nielegalny ruch kończą partię walkowerem.
 
+### Wewnętrzna liga Elo
+
+Do prowadzenia ligi wybierz osobny plik SQLite na sezon. Przykład wykorzystuje
+pięć lokalnych profili, w tym Stockfisha i Maię z Lc0. Jedna kolejka to
+20 partii, po dwie na parę. Kolejne uruchomienie z tą samą bazą dopisuje
+wyniki do sezonu. Zmieniaj `--seed` między kolejkami, aby silnik losowy
+rozgrywał inne partie.
+
+```bash
+uv run pychess-arena --config config/local.json --database .pychess/liga-01.sqlite3 --participants stockfish-18 maia-1100 my-model heuristic random --games 2 --seed 2
+uv run pychess-arena --database .pychess/liga-01.sqlite3 --elo
+```
+
+Polecenie `--elo` porządkuje uczestników według rankingu z całego sezonu.
+Używaj odrębnych nazw profili dla kolejnych wersji swojego modelu, aby każda
+wersja miała własną historię i ocenę.
+
 ## Środowisko i testy
 
 Lokalna wersja Pythona to 3.14.4. Ten sam plik blokady zależności i polecenia
