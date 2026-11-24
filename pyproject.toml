@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pychess-sprite-demo"
 version = "0.1.0"
-description = "A small pygame chess sprite-sheet demo."
+description = "Local chess games and tournaments for UCI engines and models."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -24,6 +24,7 @@ examples = ["CairoSVG>=2.7"]
 [project.scripts]
 pychess = "pychess.chess_game:main"
 pychess-arena = "pychess.arena.cli:main"
+pychess-models = "pychess.models.download:main"
 
 [dependency-groups]
 dev = [
@@ -40,6 +41,9 @@ include = [
   "/README.md",
   "/pyproject.toml",
   "/src",
+  "/config",
+  "/docs",
+  "/examples",
   "/tests",
 ]
 

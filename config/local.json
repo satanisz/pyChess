@@ -1,0 +1,32 @@
+{
+  "engines": {
+    "my-model": {
+      "type": "uci",
+      "command": ["{python}", "../examples/my_model.py", "example-weights.json"],
+      "move_time": 0.1,
+      "timeout": 5
+    },
+    "stockfish-18": {
+      "type": "uci",
+      "command": ["../.pychess/models/stockfish-18"],
+      "options": {"Threads": 1, "Hash": 32},
+      "move_time": 0.1,
+      "timeout": 5
+    },
+    "maia-1100": {
+      "type": "uci",
+      "command": ["../.pychess/models/lc0", "--weights=../.pychess/models/maia-1100.pb.gz"],
+      "nodes": 1,
+      "move_time": 1,
+      "timeout": 15
+    }
+  },
+  "play": {"white": "none", "black": "my-model", "seed": 1},
+  "arena": {
+    "participants": ["my-model", "heuristic", "random"],
+    "games": 2,
+    "max_plies": 512,
+    "seed": 1,
+    "database": "../.pychess/arena.sqlite3"
+  }
+}
