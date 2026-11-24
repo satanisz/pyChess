@@ -250,10 +250,10 @@ class GameController:
     def pgn(self, headers: Mapping[str, str] | None = None) -> str:
         """Export the game as PGN."""
         game = chess.pgn.Game.from_board(self._board)
+        game.headers["Result"] = self._board.result(claim_draw=True)
         if headers is not None:
             for key, value in headers.items():
                 game.headers[key] = value
-        game.headers["Result"] = self._board.result(claim_draw=False)
 
         exporter = chess.pgn.StringExporter(
             headers=True,

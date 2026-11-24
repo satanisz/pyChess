@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from pychess.core import GameController, IllegalMoveError, MoveRecord, Side
 from pychess.engines import EngineContext, PlayerEngine
+from pychess.engines.uci import EngineFailure, EngineIllegalMove, EngineTimeout
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +22,7 @@ class ArenaGameResult:
     moves: tuple[MoveRecord, ...]
     pgn: str
     illegal_move: str | None = None
+    error: str | None = None
 
 
 def play_game(
@@ -30,6 +33,8 @@ def play_game(
     max_plies: int = 512,
 ) -> ArenaGameResult:
     """Play a headless game between two engines."""
+    if max_plies < 1:
+        raise ValueError("max_plies must be positive")
     game = (
         GameController()
         if initial_fen is None
@@ -37,18 +42,32 @@ def play_game(
     )
     engines = {Side.WHITE: white, Side.BLACK: black}
 
-    while not game.status().is_game_over and len(game.move_history()) < max_plies:
+    for _ in range(max_plies):
+        if game.status().is_game_over:
+            break
         context = _context_from_game(game)
         engine = engines[game.turn]
-        decision = engine.choose_move(context)
-
-        if decision.uci not in context.legal_moves:
-            return _illegal_move_result(game, white, black, decision.uci)
-
+        forfeit = "0-1" if game.turn == Side.WHITE else "1-0"
+        try:
+            decision = engine.choose_move(context)
+        except EngineIllegalMove as exc:
+            return _result_from_game(
+                game, white, black, forfeit, "illegal_move", illegal_move=exc.move
+            )
+        except EngineTimeout as exc:
+            return _result_from_game(
+                game, white, black, forfeit, "timeout", error=str(exc)
+            )
+        except EngineFailure as exc:
+            return _result_from_game(
+                game, white, black, forfeit, "engine_error", error=str(exc)
+            )
         try:
             game.push_uci(decision.uci)
         except IllegalMoveError:
-            return _illegal_move_result(game, white, black, decision.uci)
+            return _result_from_game(
+                game, white, black, forfeit, "illegal_move", illegal_move=decision.uci
+            )
 
     status = game.status()
     termination = "normal" if status.is_game_over else "max_plies"
@@ -64,23 +83,6 @@ def _context_from_game(game: GameController) -> EngineContext:
     )
 
 
-def _illegal_move_result(
-    game: GameController,
-    white: PlayerEngine,
-    black: PlayerEngine,
-    illegal_move: str,
-) -> ArenaGameResult:
-    result = "0-1" if game.turn == Side.WHITE else "1-0"
-    return _result_from_game(
-        game,
-        white,
-        black,
-        result,
-        "illegal_move",
-        illegal_move=illegal_move,
-    )
-
-
 def _result_from_game(
     game: GameController,
     white: PlayerEngine,
@@ -89,9 +91,11 @@ def _result_from_game(
     termination: str,
     *,
     illegal_move: str | None = None,
+    error: str | None = None,
 ) -> ArenaGameResult:
     headers = {
         "Event": "PyChess Arena",
+        "Date": datetime.now(UTC).strftime("%Y.%m.%d"),
         "White": white.name,
         "Black": black.name,
         "Result": result,
@@ -106,4 +110,5 @@ def _result_from_game(
         moves=game.move_history(),
         pgn=game.pgn(headers),
         illegal_move=illegal_move,
+        error=error,
     )
