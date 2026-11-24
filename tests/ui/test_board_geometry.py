@@ -15,6 +15,8 @@ def test_board_geometry_is_centered_and_uses_square_board() -> None:
 def test_square_coordinates_use_white_perspective() -> None:
     board = BoardGeometry(left=10, top=20, size=640)
 
+    assert not board.square("a1").is_light
+    assert board.square("h1").is_light
     assert board.square("a8").x == 10
     assert board.square("a8").y == 20
     assert board.square("h1").x == 570

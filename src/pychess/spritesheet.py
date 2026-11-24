@@ -21,7 +21,11 @@ class SpriteSheet:
     """Load single images, strips, and grids from a sprite sheet."""
 
     def __init__(
-        self, filename: str | Path, *, settings: Settings | None = None
+        self,
+        filename: str | Path,
+        *,
+        settings: Settings | None = None,
+        native_size: bool = False,
     ) -> None:
         self.filename = Path(filename)
         self.settings = settings or Settings()
@@ -32,10 +36,12 @@ class SpriteSheet:
             msg = f"Unable to load spritesheet image: {self.filename}"
             raise SpriteSheetLoadError(msg) from exc
 
-        self.sheet = pygame.transform.scale(
-            sheet,
-            (self.settings.piece_width, self.settings.piece_height),
-        )
+        self.sheet = sheet
+        if not native_size:
+            self.sheet = pygame.transform.scale(
+                sheet,
+                (self.settings.piece_width, self.settings.piece_height),
+            )
 
     def image_at(
         self, rectangle: RectLike, colorkey: ColorKey = None

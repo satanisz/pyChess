@@ -38,7 +38,8 @@ class ChessSet:
         self.sheet_path = Path(sheet_path) if sheet_path is not None else None
         self.pieces: list[Piece] = self._load_pieces()
         self._images = {(piece.color, piece.name): piece.image for piece in self.pieces}
-        self._scaled_images: dict[tuple[str, str, int], pygame.Surface] = {}
+        self._square_size: int | None = None
+        self._scaled_images: dict[tuple[str, str], pygame.Surface] = {}
 
     def image_for(self, color: str, name: str) -> pygame.Surface:
         """Return the source image for a piece."""
@@ -46,7 +47,10 @@ class ChessSet:
 
     def scaled_image_for(self, color: str, name: str, size: int) -> pygame.Surface:
         """Return a cached square-sized piece image."""
-        key = (color, name, size)
+        if self._square_size != size:
+            self._scaled_images.clear()
+            self._square_size = size
+        key = (color, name)
         if key not in self._scaled_images:
             self._scaled_images[key] = pygame.transform.smoothscale(
                 self.image_for(color, name),
@@ -63,7 +67,7 @@ class ChessSet:
             return self._load_from_sheet(path)
 
     def _load_from_sheet(self, filename: Path) -> list[Piece]:
-        sprite_sheet = SpriteSheet(filename)
+        sprite_sheet = SpriteSheet(filename, native_size=True)
         piece_images = sprite_sheet.load_grid_images(2, 6)
 
         pieces: list[Piece] = []

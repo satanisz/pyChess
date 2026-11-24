@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import pygame
+import pytest
+
 import pychess.chess_set as chess_set
 from pychess.chess_set import ChessSet
 
@@ -14,7 +17,7 @@ class FakeGame:
 
 
 class FakeSpriteSheet:
-    def __init__(self, filename: Path) -> None:
+    def __init__(self, filename: Path, *, native_size: bool) -> None:
         self.filename = filename
 
     def load_grid_images(self, rows: int, cols: int) -> list[object]:
@@ -37,3 +40,19 @@ def test_chess_set_loads_named_pieces(monkeypatch: Any, tmp_path: Path) -> None:
         "rook",
         "pawn",
     ]
+
+
+def test_resizing_reuses_only_images_at_the_current_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SDL_VIDEODRIVER", "dummy")
+    pygame.display.init()
+    try:
+        pieces = ChessSet(FakeGame(screen=pygame.display.set_mode((1, 1))))
+        assert pieces.image_for("white", "king").get_size() == (320, 320)
+        original = pieces.scaled_image_for("white", "king", 80)
+        assert pieces.scaled_image_for("white", "king", 80) is original
+        assert pieces.scaled_image_for("black", "pawn", 200).get_size() == (200, 200)
+        assert pieces.scaled_image_for("white", "king", 80) is not original
+    finally:
+        pygame.display.quit()

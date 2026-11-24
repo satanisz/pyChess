@@ -29,10 +29,13 @@ class BoardGeometry:
     size: int
 
     @classmethod
-    def from_screen(cls, width: int, height: int, *, margin: int = 0) -> BoardGeometry:
+    def from_screen(
+        cls, width: int, height: int, *, margin: int = 0, zoom_percent: int = 100
+    ) -> BoardGeometry:
         """Create centered board geometry for a screen size."""
         available = max(0, min(width, height) - 2 * margin)
-        board_size = (available // 8) * 8
+        scaled_size = available * zoom_percent // 100
+        board_size = (scaled_size // 8) * 8
         return cls(
             left=(width - board_size) // 2,
             top=(height - board_size) // 2,
@@ -55,7 +58,7 @@ class BoardGeometry:
             x=x,
             y=y,
             size=self.square_size,
-            is_light=(file_index + rank) % 2 == 1,
+            is_light=(file_index + rank) % 2 == 0,
         )
 
     def square_at(self, x: int, y: int) -> str | None:
