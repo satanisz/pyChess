@@ -39,10 +39,11 @@ class GamePanel:
     def __init__(self, screen: pygame.Surface, left: int) -> None:
         self.buttons: dict[str, pygame.Rect] = {}
         font = pygame.font.match_font("inter,dejavusans")
-        self.body = pygame.font.Font(font, 16)
-        self.small = pygame.font.Font(font, 14)
-        self.heading = pygame.font.Font(font, 22)
-        self.heading.bold = True
+        self.body = pygame.font.Font(font, 24)
+        self.small = pygame.font.Font(font, 20)
+        self.heading = pygame.font.Font(font, 32)
+        self.compact_heading = pygame.font.Font(font, 26)
+        self.heading.bold = self.compact_heading.bold = True
         self.scroll = 0
         self.zoom_percent = 100
         self.resize(screen, left)
@@ -82,16 +83,39 @@ class GamePanel:
         gap = 6
         width = (self.width - (columns - 1) * gap) // columns
         x = self.x + index * (width + gap)
-        rect = pygame.Rect(x, y, width, 36)
+        rect = pygame.Rect(x, y, width, 40)
         self._draw_button(action, rect)
-        self._label(label, y + 8, font=self.small, x=x + 9, width=width - 18)
+        if label.endswith("]") and self.small.size(label)[0] > width - 4:
+            label = label.rsplit(" [", 1)[0]
+        inset = min(9, max(2, (width - self.small.size(label)[0]) // 2))
+        self._label(
+            label,
+            rect.centery - self.small.get_height() // 2,
+            font=self.small,
+            x=x + inset,
+            width=width - 2 * inset,
+        )
+
+    def _heading_font(self, text: str) -> pygame.font.Font:
+        if self.heading.size(text)[0] <= self.width:
+            return self.heading
+        return self.compact_heading
+
+    def _paragraph(self, text: str, y: int) -> None:
+        rendered = self.body.render(text, True, MUTED, wraplength=self.width)
+        self.screen.blit(rendered, (self.x, y))
 
     def _draw_button(self, action: str, rect: pygame.Rect) -> None:
         self.buttons[action] = rect
         pygame.draw.rect(self.screen, BUTTON, rect, border_radius=5)
 
     def _zoom_controls(self, y: int) -> None:
-        self._label(f"Plansza  {self.zoom_percent}%", y + 7, width=self.width - 84)
+        self._label(
+            f"Plansza {self.zoom_percent}%",
+            y + 16 - self.small.get_height() // 2,
+            font=self.small,
+            width=self.width - 84,
+        )
         for i, (action, glyph) in enumerate((("zoom_out", "-"), ("zoom_in", "+"))):
             rect = pygame.Rect(self.x + self.width - 78 + i * 42, y, 36, 32)
             self._draw_button(action, rect)
@@ -129,44 +153,47 @@ class GamePanel:
             if error
             else status_text(status, players[status.turn] != "none")
         )
+        detail = ""
         if self.heading.size(title)[0] > self.width:
             title, _, detail = title.partition(" · ")
-            self._label(detail, 48, font=self.small, color=MUTED)
+        title_font = self._heading_font(title)
         self._label(
             title,
-            22,
-            font=self.heading,
+            14,
+            font=title_font,
             color=ERROR if error else ACCENT,
         )
-        content_top = 203
-        if self.screen.get_height() < 560:
-            content_top = 133
-            for i, (side, label) in enumerate(
-                ((Side.WHITE, "Białe"), (Side.BLACK, "Czarne"))
-            ):
-                y = 70 + 26 * i
-                self._label(label, y, font=self.small, color=MUTED, width=60)
-                self._label(
-                    player_label(players[side]),
-                    y - 2,
-                    x=self.x + 62,
-                    width=self.width - 62,
-                )
-        else:
-            self._label("Białe", 76, font=self.small, color=MUTED)
-            self._label(player_label(players[Side.WHITE]), 98)
-            self._label("Czarne", 133, font=self.small, color=MUTED)
-            self._label(player_label(players[Side.BLACK]), 155)
-        footer_top = self.screen.get_height() - 136
+        y = 14 + title_font.get_linesize()
+        if detail:
+            self._label(detail, y, font=self.small, color=MUTED)
+            y += self.small.get_linesize()
+        y += 12
+        compact = self.screen.get_height() < 640
+        label_column = self.small.size("Czarne")[0] + 12
+        for side, label in ((Side.WHITE, "Białe"), (Side.BLACK, "Czarne")):
+            self._label(label, y, font=self.small, color=MUTED)
+            name_offset = label_column if compact else 0
+            if not compact:
+                y += self.small.get_linesize()
+            self._label(
+                player_label(players[side]),
+                y,
+                x=self.x + name_offset,
+                width=self.width - name_offset,
+            )
+            y += self.body.get_linesize() + 6
+        content_top = y + 8
+        footer_top = self.screen.get_height() - 146
         if error:
             self._error_text(error, content_top, footer_top)
         elif promotion:
-            self._label("Promocja pionka", content_top, font=self.heading)
+            font = self._heading_font("Promocja pionka")
+            self._label("Promocja pionka", content_top, font=font)
             for index, (suffix, name) in enumerate(PROMOTIONS.items()):
                 self._button(
                     suffix,
                     f"{index + 1}. {name}",
-                    content_top + 42 + (index // 2) * 43,
+                    content_top + font.get_linesize() + 5 + (index // 2) * 46,
                     index=index % 2,
                     columns=2,
                 )
@@ -174,9 +201,9 @@ class GamePanel:
             self._history(moves, content_top, footer_top)
         self._zoom_controls(footer_top)
         y = footer_top + 41
-        self._button("menu", "Gracze  [M]", y, columns=2)
-        self._button("restart", "Od nowa  [R]", y, columns=2, index=1)
-        self._button("quit", "Zakończ  [Q]", y + 43)
+        self._button("menu", "Gracze [M]", y, columns=2)
+        self._button("restart", "Od nowa [R]", y, columns=2, index=1)
+        self._button("quit", "Zakończ [Q]", y + 46)
 
     def _error_text(self, message: str, y: int, bottom: int) -> None:
         # Long paths and diagnostics may contain no spaces.
@@ -191,24 +218,28 @@ class GamePanel:
             split = split if split > 0 else end
             self._label(message[:split], y, font=self.small)
             message = message[split:].lstrip()
-            y += 21
+            y += self.small.get_linesize()
 
     def _history(self, moves: tuple[MoveRecord, ...], top: int, bottom: int) -> None:
         rows: dict[int, list[str]] = {}
         for move in moves:
             pair = rows.setdefault(move.fullmove_number, ["", ""])
             pair[int(move.side == Side.BLACK)] = move.san
-        self._label("Historia ruchów", top, font=self.heading)
-        first_row_y = top + 40
+        font = self._heading_font("Historia ruchów")
+        self._label("Historia ruchów", top, font=font)
+        first_row_y = top + font.get_linesize() + 6
         if not rows:
-            self._label("Oczekiwanie na pierwszy ruch", first_row_y, color=MUTED)
+            self._paragraph("Oczekiwanie na pierwszy ruch", first_row_y)
             return
-        row_height = 26
+        row_height = self.body.get_linesize() + 4
         visible = max(1, (bottom - first_row_y - 8) // row_height)
         if len(rows) > visible:
             visible = max(1, visible - 1)
             self._label(
-                "Przewiń kółkiem myszy", bottom - 24, font=self.small, color=MUTED
+                "Przewiń kółkiem myszy",
+                bottom - self.small.get_linesize() - 4,
+                font=self.small,
+                color=MUTED,
             )
         self.scroll = max(0, min(self.scroll, len(rows) - visible))
         end = len(rows) - self.scroll
@@ -223,11 +254,13 @@ class GamePanel:
 
     def draw_menu(self, players: Mapping[Side, str]) -> None:
         self._begin()
-        self._label("Nowa partia", 22, font=self.heading, color=ACCENT)
-        self._label("Kliknij gracza, aby go zmienić.", 70, color=MUTED)
+        self._label(
+            "Nowa partia", 14, font=self._heading_font("Nowa partia"), color=ACCENT
+        )
+        self._paragraph("Kliknij gracza, aby go zmienić.", 62)
         self._label("Białe", 134, font=self.small, color=MUTED)
         self._button("white", player_label(players[Side.WHITE]) + "   >", 159)
         self._label("Czarne", 220, font=self.small, color=MUTED)
         self._button("black", player_label(players[Side.BLACK]) + "   >", 245)
-        self._button("start", "Rozpocznij partię  [Enter]", 330)
-        self._button("back", "Wróć do partii  [Esc]", 375)
+        self._button("start", "Rozpocznij [Enter]", 330)
+        self._button("back", "Wróć do partii [Esc]", 379)

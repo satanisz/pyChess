@@ -85,7 +85,7 @@ class ChessGame:
         self.board = BoardGeometry.from_screen(
             self._board_area_width(),
             self.window_size[1],
-            margin=24,
+            margin=max(24, self.panel.small.get_height() + 1),
             zoom_percent=self.zoom_percent,
         )
         self.panel.zoom_percent = self.zoom_percent
