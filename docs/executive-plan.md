@@ -1,5 +1,40 @@
 # Executive Plan: PyChess
 
+## Wydanie lokalnej platformy do gry i porównywania modeli
+
+Punktem wyjścia jest działająca gra na Pythonie 3.14, kontroler reguł,
+dwa wbudowane silniki i arena pojedynczych par. Dotychczasowy rejestr tworzył
+jedynie silnik losowy lub heurystyczny, a wyniki areny znikały po zamknięciu
+procesu. Poniższa pętla prowadzi od tego stanu do lokalnych eksperymentów.
+
+| Etap | Decyzja implementacyjna | Próba odbiorowa |
+| --- | --- | --- |
+| 1. Kontrakt | Wspólny plik JSON wskazuje program UCI, argumenty, opcje i budżet na ruch. | Ten sam profil silnika działa w grze i w arenie, również spoza katalogu projektu. |
+| 2. Źródła modeli | Katalog pobrań opisuje wersję, URL i SHA-256. Silnik z osadzoną siecią i oddzielny plik wag reprezentują dwa sposoby dystrybucji. | Pobrać publiczny silnik, sprawdzić sumę i uzyskać legalny ruch. Uruchomić przykładowy własny model jako osobny proces. |
+| 3. Gra | Wybór graczy dla obu kolorów, stan partii i obsługa błędu silnika w oknie. | Zagrać ruch przeciwko silnikowi, obejrzeć odpowiedź, rozpocząć nową partię i zamknąć okno podczas obliczeń. |
+| 4. Arena | Mecze i turniej każdy z każdym, zamiana kolorów, archiwum SQLite i eksport PGN. | Rozegrać turniej trzech uczestników, odczytać klasyfikację po ponownym uruchomieniu i odtworzyć partie z PGN. |
+| 5. Integracja | Uruchamiać testy reguł i regresji, testy procesu UCI oraz próby obu publicznych poleceń. | Wynik walkowera jest zgodny w bazie, tabeli i PGN. Błędne wagi, timeout i przerwanie pobierania dają odtwarzalne wyniki lub komunikaty. |
+
+Prace nad protokołem, oknem gry i areną można wykonywać równolegle po
+uzgodnieniu interfejsu konfiguracji. Po połączeniu zmian powtarzamy próby
+odbiorowe z prawdziwym silnikiem. Każdy wykryty błąd wraca do odpowiedniej
+części wraz z przypadkiem testowym. Poniższa mapa rozwoju obejmuje także
+przyszłe eksperymenty z treningiem i self-play.
+
+### Wynik odbioru na Pythonie 3.14.4
+
+W oknie Pygame na wirtualnym ekranie SDL człowiek zagrał e4, a Stockfish 18
+odpowiedział e5. Zamykanie okna przerwało również aktywne obliczenia silnika.
+Własny model z przykładu uruchomił się jako osobny proces z tego samego JSON.
+
+Arena zapisała sześć partii turnieju Stockfish–heurystyka–model przykładowy
+i dwie partie Stockfish–Maia z zamianą kolorów. Maia-1100 używała pobranych
+wag i Lc0 0.32.1 na CPU. Odtworzenie wszystkich ośmiu eksportów PGN dało
+te same końcowe wyniki i liczby półruchów co SQLite. Osobne testy objęły
+nielegalną odpowiedź, niedostępny program, zawieszenie silnika i błędną
+sumę pliku. Instalacja pakietu wheel w czystym środowisku pozwoliła uruchomić
+katalog modeli oraz arenę z własnym graczem spoza katalogu projektu.
+
 ## Cel
 
 Zbudować PyChess jako aplikację i platformę eksperymentalną dla konkurujących ze sobą modeli szachowych. Projekt ma obsługiwać tryby:
@@ -69,8 +104,7 @@ Przykładowy interfejs:
 
 ```python
 class PlayerEngine:
-    def choose_move(self, position, legal_moves, time_left) -> MoveDecision:
-        ...
+    def choose_move(self, position, legal_moves, time_left) -> MoveDecision: ...
 ```
 
 Wejście dla modelu:
