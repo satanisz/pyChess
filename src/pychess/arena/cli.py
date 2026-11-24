@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pychess.arena import play_game
 from pychess.arena.archive import archive_standings, export_pgn, open_archive, save_game
+from pychess.arena.history import archive_history
 from pychess.config import AppConfig, load_config
 from pychess.eval import MatchScore
 from pychess.eval.standings import Standings
@@ -82,6 +83,24 @@ def _run_games(args: argparse.Namespace, cfg: AppConfig, database: Path | None) 
     sys.stdout.write(score.summary_line() + "\n" + standings.table() + "\n")
 
 
+def _show_elo_history(connection: sqlite3.Connection, player: str) -> None:
+    rows = [row for row in archive_history(connection) if row.player == player]
+    if not rows:
+        raise ValueError(f"No archived games for player {player!r}")
+    sys.stdout.write(
+        "player game\tleague game\tplayer\tcolor\topponent\tPGN result\t"
+        "Elo before\tElo after\tchange\trank after\ttermination\n"
+    )
+    for row in rows:
+        change = row.elo_after - row.elo_before
+        rank = row.rank_after if row.rank_after is not None else "-"
+        sys.stdout.write(
+            f"{row.player_game}\t{row.game_id}\t{row.player}\t{row.color}\t"
+            f"{row.opponent}\t{row.result}\t{row.elo_before:.1f}\t{row.elo_after:.1f}\t"
+            f"{change:+.1f}\t{rank}\t{row.termination}\n"
+        )
+
+
 def _report(args: argparse.Namespace, database: Path | None) -> None:
     if database is None:
         raise ValueError("Archive reports require --database or arena.database in JSON")
@@ -105,6 +124,8 @@ def _report(args: argparse.Namespace, database: Path | None) -> None:
         if args.standings:
             standings = archive_standings(connection)
             sys.stdout.write(standings.table(by_elo=args.standings == "elo") + "\n")
+        if args.elo_history is not None:
+            _show_elo_history(connection, args.elo_history)
         if args.export_pgn is not None:
             count = export_pgn(connection, args.export_pgn)
             sys.stdout.write(f"Exported {count} games to {args.export_pgn}\n")
@@ -140,6 +161,11 @@ def main(argv: list[str] | None = None) -> int:
         const="elo",
         help="report the league ranking ordered by local Elo and exit",
     )
+    reports.add_argument(
+        "--elo-history",
+        metavar="ENGINE",
+        help="show a player's rating and league rank after each of its games and exit",
+    )
     parser.add_argument(
         "--export-pgn",
         type=Path,
@@ -150,7 +176,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         cfg = load_config(args.config)
         database = args.database if args.database is not None else cfg.arena.database
-        if args.standings or args.export_pgn is not None:
+        if (
+            args.standings
+            or args.elo_history is not None
+            or args.export_pgn is not None
+        ):
             _report(args, database)
         else:
             _run_games(args, cfg, database)

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+INITIAL_ELO = 1500.0
+
 
 @dataclass(slots=True)
 class PlayerScore:
@@ -13,7 +15,7 @@ class PlayerScore:
     losses: int = 0
     unfinished: int = 0
     self_play: int = 0
-    elo: float = 1500.0
+    elo: float = INITIAL_ELO
 
     @property
     def points(self) -> float:
@@ -58,13 +60,19 @@ class Standings:
         first.elo += change
         second.elo -= change
 
+    def ranked_by_elo(self) -> list[PlayerScore]:
+        return sorted(
+            self.players.values(), key=lambda p: (not p.rated_games, -p.elo, p.name)
+        )
+
     def table(self, *, by_elo: bool = False) -> str:
         rows = ["engine\tW\tD\tL\tunfinished\tself-play\tpoints\tlocal Elo"]
-        players = self.players.values()
         if by_elo:
-            ranked = sorted(players, key=lambda p: (not p.rated_games, -p.elo, p.name))
+            ranked = self.ranked_by_elo()
         else:
-            ranked = sorted(players, key=lambda p: (-p.points, -p.elo, p.name))
+            ranked = sorted(
+                self.players.values(), key=lambda p: (-p.points, -p.elo, p.name)
+            )
         for player in ranked:
             rating = str(round(player.elo)) if player.rated_games else "-"
             rows.append(

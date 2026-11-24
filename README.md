@@ -95,9 +95,15 @@ rozgrywał inne partie.
 ```bash
 uv run pychess-arena --config config/local.json --database .pychess/liga-01.sqlite3 --participants stockfish-18 maia-1100 my-model heuristic random --games 2 --seed 2
 uv run pychess-arena --database .pychess/liga-01.sqlite3 --elo
+uv run pychess-arena --database .pychess/liga-01.sqlite3 --elo-history my-model
 ```
 
 Polecenie `--elo` porządkuje uczestników według rankingu z całego sezonu.
+Opcja `--elo-history NAZWA` pokazuje kolejne partie jednego modelu,
+jego przeciwników, kolor, wynik zapisany z perspektywy białych, zmianę Elo
+oraz miejsce w lidze po każdej partii.
+W [raporcie z sezonu](docs/liga-01/README.md) znajdziesz wykres i historię
+50 partii każdego z pięciu modeli wraz z zapisami PGN.
 Używaj odrębnych nazw profili dla kolejnych wersji swojego modelu, aby każda
 wersja miała własną historię i ocenę.
 
